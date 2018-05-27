@@ -63,20 +63,32 @@
  * 
  * Aggiungere pulsante di test nella versione finale.
  * 
+ * ATMEL ATTINY 25/45/85 / ARDUINO
+
+                  +-\/-+
+ Ain0 (D 5) PB5  1|    |8  Vcc
+ Ain3 (D 3) PB3  2|    |7  PB2 (D 2) Ain1
+ Ain2 (D 4) PB4  3|    |6  PB1 (D 1) pwm1
+            GND  4|    |5  PB0 (D 0) pwm0
+                  +----+
+
  */
 
 // Manchester library
 #include <Manchester.h>
 
+ 
+#include <avr/sleep.h>    // Sleep Modes
+#include <avr/power.h>    // Power management
 
-#define TX_PIN  4  // pin where your transmitter is connected
+#define TX_PIN  0  // pin where your transmitter (antenna) is connected
 #define LED_PIN 3  // pin for blinking LED
-#define PIR_PIN 0  // pin where your PIR is connected
+#define PIR_PIN 2  // pin where your PIR is connected (interrupt)
 
 // Tempo ritardo "riavvio", dopo invio di un dato, e` in millesimi di secondo.
-int restart=10000;  // 1000 = 1s
+int restart=3000;  // 1000 = 1s
 // Tempo ritardo invio fra dati
-int Tinvio=100;
+int Tinvio=110;
 
 int PIRstate;            // the current reading from the input PIR
 
@@ -84,14 +96,18 @@ int PIRstate;            // the current reading from the input PIR
 // (o altre numerazioni/sigle differenti, per discriminare il sensore)
 // dato da inviare, 0 per segnale pir basso, 1 per segnale pir alto
 uint8_t data0[8] = {8,
-                   'P', 'I', 'R', '1',
+                   'P', 'I', 'R', '2',
                    ',', '0'
                    };
 uint8_t data1[8] = {8,
-                   'P', 'I', 'R', '1',
+                   'P', 'I', 'R', '2',
                    ',', '1'
                    };
 
+//ISR (PCINT0_vect) 
+// {
+// // do something interesting here
+// }
 
 void setup() {
   // put your setup code here, to run once:
@@ -105,6 +121,13 @@ void setup() {
    */
   //man.workAround1MhzTinyCore(); //add this in order for transmitter to work with 1Mhz Attiny85/84
   man.setupTransmit(TX_PIN, MAN_600);
+
+  // Copiato e modificato da: http://www.gammon.com.au/forum/?id=11488&reply=9#reply9
+  // pin change interrupt (example for D2)
+  PCMSK  |= bit (PCINT2);  // want pin D2 / pin 7
+  GIFR   |= bit (PCIF);    // clear any outstanding interrupts
+  GIMSK  |= bit (PCIE);    // enable pin change interrupts 
+  
 }
 
 
@@ -113,9 +136,9 @@ void loop() {
   int reading = digitalRead(PIR_PIN);
 
   // se l'ingresso e` cambiato
-  if (reading != PIRstate) {
+//  if (reading != PIRstate) {
     PIRstate = reading;
-    
+
     if (PIRstate == LOW) {
       digitalWrite(LED_PIN, LOW);
       for (int i=1; i<=10; i++) {
@@ -123,6 +146,9 @@ void loop() {
         delay(Tinvio);
       }
     delay(restart);
+    goToSleep ();  // *** ho messo lo sleep dopo una lettura off, ha senso ?
+    // o e` meglio che azzeri io la lattura dopo un tempo e mandi in sleep
+    // direttamente ?
     }
     if (PIRstate == HIGH) {
       digitalWrite(LED_PIN, HIGH);
@@ -132,5 +158,17 @@ void loop() {
       }
     delay(restart);
     }
-  }
+//  }
+  //
 }
+
+void goToSleep () {
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  ADCSRA = 0;            // turn off ADC
+  power_all_disable ();  // power off ADC, Timer 0 and 1, serial interface
+  sleep_enable();
+  sleep_cpu();                             
+  sleep_disable();   
+  power_all_enable();    // power everything back on
+}  // end of goToSleep 
+
