@@ -93,7 +93,7 @@
 // Tempo ritardo "fasi", dopo invio di un dato, prima del successivo, e` in millesimi di secondo.
 int Tretard=3000;  // 1000 = 1s
 // Tempo ritardo invio fra dati (antenna)
-int Tinvio=100;  // 100:PIR1, 110:PIR2, ...
+int Tinvio=110;
 
 // NON USATO
 //int PIRstate;            // the current reading from the input PIR
@@ -102,11 +102,11 @@ int Tinvio=100;  // 100:PIR1, 110:PIR2, ...
 // (o altre numerazioni/sigle differenti, per discriminare il sensore)
 // dato da inviare, 0 per segnale pir basso, 1 per segnale pir alto
 uint8_t data0[8] = {8,
-                   'P', 'I', 'R', '1',
+                   'P', 'I', 'R', '2',
                    ',', '0'
                    };
 uint8_t data1[8] = {8,
-                   'P', 'I', 'R', '1',
+                   'P', 'I', 'R', '2',
                    ',', '1'
                    };
 
